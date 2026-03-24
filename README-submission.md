@@ -20,8 +20,15 @@ Brief reflection on your experience with running your code on AWS.
 
 # Reflection
 
-Provide a reflection by each of the team member (in a separate subsection)
+The first subsection below should include how the team used AI tools to help with the
+project,including which tools were used, how they were used, and any benefits or challenges
+encountered.
 
+Provide a reflection by each of the team member (in a separate subsection for each team member) on
+their experience with the project, including what they learned, what they found challenging, and how
+they overcame those challenges.
+
+## AI Usage
 ## Reflection (Team member name: )
 ## Reflection (Team member name: )
 ## Reflection (Team member name: )

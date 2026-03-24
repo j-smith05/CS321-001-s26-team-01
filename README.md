@@ -20,6 +20,24 @@ requirements for a problem from a specific domain.
 - Learn how to wrangle raw data using regular expressions.
 - Demonstrate  how to use caching to improve performance of an application.
 - Demonstrate how to run an application in the cloud.
+- Learn guided use of AI tools for software engineering tasks such as code generation, debugging,
+  and testing.
+
+# AI Usage
+
+For this project, GenAI is treated as a development tool requiring critical evaluation. Students
+must verify, understand, and modify all AI-generated code. In particular, students will use
+CoPilot inside their IDE. Several tutorials are available online on using CoPilot within VSCode
+and other IDEs.
+
+In particular, students are expected to critically evaluate and show the ability to modify
+all AI-generated code, ensuring it meets project requirements and adheres to best practices.
+The focus will be on developing effective prompt engineering skills and validating AI outputs,
+rather than relying on AI for complete solutions.
+
+Creating a plan for the project before using AI tools is highly recommended so you are controlling
+the overall design and implementation of the project and not letting the AI tool control the
+project.  
 
 # Starter Code
 This repository contains:
