@@ -3,9 +3,9 @@
 
 | Last Name | First Name | GitHub User Name |
 |-----------|------------|------------------|
-| TBD       | TBD        | TBD              |
-| TBD       | TBD        | TBD              |
-| TBD       | TBD        | TBD              |
+| Elliott   | Jonah      | Jayw-E7          |
+| Klinge    | Tanner     | tk-44            |
+| Smith     | Jacob      | j-smith05        |
 
 # Test Results
 How many of the dumpfiles matched (using the check-dump-files.sh script)?
