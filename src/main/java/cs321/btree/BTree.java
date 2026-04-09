@@ -101,7 +101,7 @@ public class BTree implements BTreeInterface {
         size++;
     }
 
-    private void insertNonFull(BTreeNode node, TreeObject obj) {
+    private void insertNonFull(BTreeNode node, TreeObject obj) throws IOException {
         int i = node.n - 1;
 
         if (node.leaf) {
