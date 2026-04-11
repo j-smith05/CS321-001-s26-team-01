@@ -40,6 +40,10 @@ public class BTree implements BTreeInterface {
         }
     }
 
+    /**
+     * Constructor for BTree with specified file name. Initializes an empty B-Tree with the given file name and a default degree of 2.
+     * @param fileName the name of the file to dump to.
+     */
     public BTree(String fileName) {
         this.degree = 2;
         this.fileName = fileName;
@@ -48,7 +52,12 @@ public class BTree implements BTreeInterface {
         this.height = 0;
         this.root = new BTreeNode(true);
     }
-
+    
+    /**
+     * Constructor for BTree with specified degree and file name. Initializes an empty B-Tree with the given degree and file name.
+     * @param degree the minimum degree of the B-Tree
+     * @param fileName the name of the file to dump to
+     */
     public BTree(int degree, String fileName) {
         this.degree = degree;
         this.fileName = fileName;
@@ -58,6 +67,10 @@ public class BTree implements BTreeInterface {
         this.root = new BTreeNode(true);
     }
 
+    /**
+     * Constructor for BTree with specified degree. Initializes an empty B-Tree with the given degree.
+     * @param degree the minimum degree of the B-Tree
+     */
     public BTree(int degree) {
         this.degree = degree;
         this.fileName = null;
