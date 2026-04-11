@@ -5,6 +5,14 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+
+/** A B-Tree implementation that supports insertion, searching, 
+ * and dumping to file. The delete operation and database 
+ * dumping are not implemented in this version. 
+ * The B-Tree is designed to store TreeObjects, which contain a key and a count.
+ * The B-Tree maintains properties such as size, number of nodes, and height.
+ * @author Jacob Smith, Jonah Elliott
+ */
 public class BTree implements BTreeInterface {
 
     private final int degree;
@@ -19,7 +27,7 @@ public class BTree implements BTreeInterface {
      * Internal B-Tree node class.
      */
     private class BTreeNode {
-        int n; // number of keys currently stored
+        int n;
         boolean leaf;
         TreeObject[] keys;
         BTreeNode[] children;
@@ -32,7 +40,6 @@ public class BTree implements BTreeInterface {
         }
     }
 
-    // Constructor 1: filename only
     public BTree(String fileName) {
         this.degree = 2;
         this.fileName = fileName;
@@ -42,7 +49,6 @@ public class BTree implements BTreeInterface {
         this.root = new BTreeNode(true);
     }
 
-    // Constructor 2: degree + filename
     public BTree(int degree, String fileName) {
         this.degree = degree;
         this.fileName = fileName;
@@ -52,7 +58,6 @@ public class BTree implements BTreeInterface {
         this.root = new BTreeNode(true);
     }
 
-    // Optional constructor
     public BTree(int degree) {
         this.degree = degree;
         this.fileName = null;
@@ -103,6 +108,11 @@ public class BTree implements BTreeInterface {
         size++;
     }
 
+    /**
+     * Helper method to insert a key into a node that is guaranteed to be non-full.
+     * @param node the node to insert into
+     * @param obj the TreeObject to insert
+     */
     private void insertNonFull(BTreeNode node, TreeObject obj) {
         int i = node.n - 1;
 
@@ -131,40 +141,38 @@ public class BTree implements BTreeInterface {
         }
     }
 
+    /**
+     * Splits the child node at childIndex of the given parent node.
+     * @param parent the node whose child is being split
+     * @param childIndex the index of the child to split
+     */
     private void splitChild(BTreeNode parent, int childIndex) {
         BTreeNode fullChild = parent.children[childIndex];
         BTreeNode newChild = new BTreeNode(fullChild.leaf);
 
-        // newChild gets t-1 keys
         newChild.n = degree - 1;
 
-        // copy last t-1 keys from fullChild to newChild
         for (int j = 0; j < degree - 1; j++) {
             newChild.keys[j] = fullChild.keys[j + degree];
         }
 
-        // if not leaf, copy last t children
         if (!fullChild.leaf) {
             for (int j = 0; j < degree; j++) {
                 newChild.children[j] = fullChild.children[j + degree];
             }
         }
 
-        // reduce fullChild key count
         fullChild.n = degree - 1;
 
-        // shift parent's children right
         for (int j = parent.n; j >= childIndex + 1; j--) {
             parent.children[j + 1] = parent.children[j];
         }
         parent.children[childIndex + 1] = newChild;
 
-        // shift parent's keys right
         for (int j = parent.n - 1; j >= childIndex; j--) {
             parent.keys[j + 1] = parent.keys[j];
         }
 
-        // move median key up to parent
         parent.keys[childIndex] = fullChild.keys[degree - 1];
         parent.n++;
 
@@ -176,6 +184,12 @@ public class BTree implements BTreeInterface {
         return search(root, key);
     }
 
+    /**
+     * Helper method to recursively search for a key in the B-Tree starting from a given node.
+     * @param node current node being searched
+     * @param key the key to search for
+     * @return the TreeObject if found, or null if not found
+     */
     private TreeObject search(BTreeNode node, String key) {
         int i = 0;
 
@@ -199,6 +213,11 @@ public class BTree implements BTreeInterface {
         dumpToFile(root, out);
     }
 
+    /**
+     * Helper method to perform in-order traversal and write keys to file.
+     * @param node current node being traversed
+     * @param out PrintWriter to write keys to
+     */
     private void dumpToFile(BTreeNode node, PrintWriter out) {
         for (int i = 0; i < node.n; i++) {
             if (!node.leaf) {
@@ -222,12 +241,21 @@ public class BTree implements BTreeInterface {
         // not implemented
     }
 
+    /**
+     * Returns an array of all keys in the B-Tree, sorted in ascending order.
+     * @return String[] of sorted keys
+     */
     public String[] getSortedKeyArray() {
         List<String> keys = new ArrayList<>();
         collectKeysInOrder(root, keys);
         return keys.toArray(new String[0]);
     }
 
+    /**
+     * Helper method to perform in-order traversal and collect keys in sorted order.
+     * @param node current node being traversed
+     * @param keys list to collect keys into
+     */
     private void collectKeysInOrder(BTreeNode node, List<String> keys) {
         for (int i = 0; i < node.n; i++) {
             if (!node.leaf) {
@@ -246,7 +274,10 @@ public class BTree implements BTreeInterface {
     // ------------------------
 
 
-
+    /**
+     * Helper method to insert a TreeObject into the B-Tree without checking for duplicates.
+     * @param obj the TreeObject to insert
+     */
     private void insertLoaded(TreeObject obj) {
         if (root.n == 2 * degree - 1) {
             BTreeNode newRoot = new BTreeNode(false);
@@ -261,6 +292,11 @@ public class BTree implements BTreeInterface {
         size++;
     }
 
+    /**
+     * Helper method to perform in-order traversal and collect TreeObjects in sorted order.
+     * @param node current node being traversed
+     * @param objects list to collect TreeObjects into
+     */
     private void collectObjectsInOrder(BTreeNode node, List<TreeObject> objects) {
         for (int i = 0; i < node.n; i++) {
             if (!node.leaf) {
