@@ -1,25 +1,27 @@
 package cs321.btree;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
-
-/** A B-Tree implementation that supports insertion, searching, 
- * and dumping to file. The delete operation and database 
- * dumping are not implemented in this version. 
- * The B-Tree is designed to store TreeObjects, which contain a key and a count.
- * The B-Tree maintains properties such as size, number of nodes, and height.
- * @author Jacob Smith, Jonah Elliott
- */
 public class BTree implements BTreeInterface {
 
-    private int degree;
+    private int METADATA_SIZE = Long.BYTES; //offset from root node
+    private long nextDiskAddress = METADATA_SIZE;
+    private FileChannel file;
+    private ByteBuffer buffer;
+    private int nodeSize;
+    private File fileObj;
+
+    private long rootAddress = METADATA_SIZE;
+
+    private final int degree;
     private long size;
     private long numberOfNodes;
     private int height;
@@ -30,58 +32,112 @@ public class BTree implements BTreeInterface {
     /**
      * Internal B-Tree node class.
      */
-    private class BTreeNode {
-        int n;
-        boolean leaf;
-        TreeObject[] keys;
-        BTreeNode[] children;
+private class BTreeNode {
+    int n;
+    boolean leaf;
+    TreeObject[] keys;
 
-        BTreeNode(boolean leaf) {
-            this.leaf = leaf;
-            this.n = 0;
-            this.keys = new TreeObject[2 * degree - 1];
-            this.children = new BTreeNode[2 * degree];
+    long[] children;   
+    long address;      
+
+    BTreeNode(boolean leaf, boolean isNew) {
+        this.leaf = leaf;
+        this.n = 0;
+
+        this.keys = new TreeObject[2 * degree - 1];
+        //this.children = new BTreeNode[2 * degree];
+        this.children = new long[2 * degree]; //proposed change
+        //TODO change all references to children to work with type long instead of type BTreeNode
+        /* This way the child pointers can be stored on disk without loading
+        everything into memory all at once */
+
+        for (int i = 0; i < children.length; i++) {
+            children[i] = 0;
+        }
+
+        if (isNew) {
+            this.address = nextDiskAddress;
+            nextDiskAddress += nodeSize;
         }
     }
+}
 
-    /**
-     * Constructor for BTree with specified file name. Initializes an empty B-Tree with the given file name and a default degree of 2.
-     * @param fileName the name of the file to dump to.
-     */
     public BTree(String fileName) {
-        this.degree = 2;
-        this.fileName = fileName;
-        this.size = 0;
-        this.numberOfNodes = 1;
-        this.height = 0;
-        this.root = new BTreeNode(true);
+        this(2, fileName);
     }
-    
-    /**
-     * Constructor for BTree with specified degree and file name. Initializes an empty B-Tree with the given degree and file name.
-     * @param degree the minimum degree of the B-Tree
-     * @param fileName the name of the file to dump to
-     */
+
     public BTree(int degree, String fileName) {
         this.degree = degree;
         this.fileName = fileName;
         this.size = 0;
         this.numberOfNodes = 1;
         this.height = 0;
-        this.root = new BTreeNode(true);
+        this.root = new BTreeNode(true, true);
+
+        File fileObj = new File(fileName);
+
+		try {
+			if (!fileObj.exists()) {
+				fileObj.createNewFile();
+				RandomAccessFile dataFile = new RandomAccessFile(fileName,
+						"rw");
+				file = dataFile.getChannel();
+				writeMetaData();
+			} else {
+				RandomAccessFile dataFile = new RandomAccessFile(fileName,
+						"rw");
+				file = dataFile.getChannel();
+				readMetaData();
+				root = diskRead(rootAddress);
+			}
+		} catch (FileNotFoundException e) {
+			System.err.println(e);
+		} catch (IOException e) {
+            System.err.println(e);
+        }
     }
 
-    /**
-     * Constructor for BTree with specified degree. Initializes an empty B-Tree with the given degree.
-     * @param degree the minimum degree of the B-Tree
-     */
-    public BTree(int degree) {
+    public BTree(int degree) throws IOException {
         this.degree = degree;
         this.fileName = null;
         this.size = 0;
         this.numberOfNodes = 1;
         this.height = 0;
-        this.root = new BTreeNode(true);
+        this.root = new BTreeNode(true, true);
+    }
+
+    /**
+     * Reads in the metadata from the file
+     * 
+     * @throws IOException
+     */
+    public void readMetaData() throws IOException {
+        file.position(0);
+
+		ByteBuffer tmpbuffer = ByteBuffer.allocateDirect(METADATA_SIZE);
+
+		tmpbuffer.clear();
+		file.read(tmpbuffer);
+
+		tmpbuffer.flip();
+		rootAddress = tmpbuffer.getLong();
+    }
+
+    /**
+     * Writes the metadata to the file
+     * 
+     * @throws IOException
+     */
+    public void writeMetaData() throws IOException {
+        file.position(0);
+
+		ByteBuffer tmpbuffer = ByteBuffer.allocateDirect(METADATA_SIZE);
+
+		tmpbuffer.clear();
+		tmpbuffer.putLong(rootAddress);
+
+		tmpbuffer.flip();
+		file.write(tmpbuffer);
     }
 
     @Override
@@ -113,8 +169,9 @@ public class BTree implements BTreeInterface {
         }
 
         if (root.n == 2 * degree - 1) {
-            BTreeNode newRoot = new BTreeNode(false);
-            newRoot.children[0] = root;
+            BTreeNode newRoot = new BTreeNode(false, true);
+            newRoot.children[0] = root.address; //proposed change
+            //newRoot.children[0] = root;
             splitChild(newRoot, 0);
             root = newRoot;
             numberOfNodes++;
@@ -146,7 +203,9 @@ public class BTree implements BTreeInterface {
             }
             i++;
 
-            if (node.children[i].n == 2 * degree - 1) {
+            BTreeNode child = diskRead(node.children[i])
+
+            if (child.n == 2 * degree - 1) {
                 splitChild(node, i);
 
                 if (obj.compareTo(node.keys[i]) > 0) {
@@ -154,7 +213,7 @@ public class BTree implements BTreeInterface {
                 }
             }
 
-            insertNonFull(node.children[i], obj);
+            insertNonFull(child, obj);
         }
     }
 
@@ -164,8 +223,9 @@ public class BTree implements BTreeInterface {
      * @param childIndex the index of the child to split
      */
     private void splitChild(BTreeNode parent, int childIndex) {
-        BTreeNode fullChild = parent.children[childIndex];
-        BTreeNode newChild = new BTreeNode(fullChild.leaf);
+
+        //BTreeNode fullChild = parent.children[childIndex];
+        //BTreeNode newChild = new BTreeNode(fullChild.leaf);
 
         newChild.n = degree - 1;
 
@@ -250,7 +310,7 @@ public class BTree implements BTreeInterface {
 
     @Override
     public void dumpToDatabase(String dbName, String tableName) throws IOException {
-        // not implemented
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -286,70 +346,72 @@ public class BTree implements BTreeInterface {
         }
     }
 
+    // ------------------------
+    // Disk Write / Read
+    // ------------------------
+
     /**
-     * Writes the B-Tree to disk in a binary format. 
-     * The format includes the degree, size, number 
-     * of nodes, height, and all TreeObjects in sorted order.
-     * @throws IOException if an I/O error occurs while writing to the file
+     * 
+     * @param diskAddress
+     * 
+     * @return the Node object
+     * @throws IOException
      */
-    public void diskWrite() throws IOException {
-        if (fileName == null) {
-            return;
+    private BTreeNode diskRead(long diskAddress) throws IOException {
+        //FIXME finish diskRead
+        if (diskAddress == 0)
+            return null;
+
+        file.position(diskAddress);
+        buffer.clear();
+        file.read(buffer);
+        buffer.flip();
+
+        BTreeNode node = new BTreeNode(false, false);
+
+        node.n = buffer.getInt();
+        node.leaf = buffer.get() == 1;
+
+        for (int i = 0; i < 2 * degree - 1; i++) {
+            long value = buffer.getLong();
+            long count = buffer.getLong();
         }
 
-        List<TreeObject> objects = new ArrayList<>();
-        collectObjectsInOrder(root, objects);
+        //FIXME finish diskRead
 
-        try (DataOutputStream out = new DataOutputStream(new FileOutputStream(fileName))) {
-            out.writeInt(degree);
-            out.writeLong(size);
-            out.writeLong(numberOfNodes);
-            out.writeInt(height);
+        long value = buffer.getLong();
+        long frequency = buffer.getLong();
 
-            out.writeInt(objects.size());
-            for (TreeObject obj : objects) {
-                out.writeUTF(obj.getKey());
-                out.writeLong(obj.getCount());
-            }
-        }
+        return null;
     }
 
     /**
-     * Reads in the data from disk with the given binary format
-     * @throws IOException
+     * 
      */
-    public void diskRead() throws IOException {
-        if (fileName == null) {
-            return;
-        }
+    private void diskWrite(BTreeNode x) throws IOException {
+        //FIXME finish diskWrite
+        file.position(x.address);
+        buffer.clear();
 
-        try (DataInputStream in = new DataInputStream(new FileInputStream(fileName))) {
-            int loadedDegree = in.readInt();
-            long storedSize = in.readLong();
-            long storedNodeCount = in.readLong();
-            int storedHeight = in.readInt();
+        buffer.putInt(x.n);
+        buffer.put((byte)(x.leaf ? 1 : 0));
 
-            int count = in.readInt();
-
-            this.degree = loadedDegree;
-            this.root = new BTreeNode(true);
-            this.size = 0;
-            this.numberOfNodes = 1;
-            this.height = 0;
-
-            for (int i = 0; i < count; i++) {
-                String key = in.readUTF();
-                long keyCount = in.readLong();
-                insertLoaded(new TreeObject(key, keyCount));
+        for (int i = 0; i < 2 * degree - 1; i++) {
+            if (i < x.n) {
+                buffer.putLong(x.keys[i].getCount());
+            } else {
+                buffer.putLong(0);
+                buffer.putLong(0);
             }
-
-            // restore metadata to match saved values if desired
-            this.size = storedSize;
-            this.numberOfNodes = storedNodeCount;
-            this.height = storedHeight;
         }
-    } 
 
+        for (int i = 0; i < 2 * degree; i++) {
+            buffer.putLong(x.children[i]);
+        }
+
+        buffer.flip();
+        file.write(buffer);
+    }
 
     /**
      * Helper method to insert a TreeObject into the B-Tree without checking for duplicates.
