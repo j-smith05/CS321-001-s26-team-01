@@ -1,6 +1,8 @@
 package cs321.btree;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -17,7 +19,7 @@ import java.util.List;
  */
 public class BTree implements BTreeInterface {
 
-    private final int degree;
+    private int degree;
     private long size;
     private long numberOfNodes;
     private int height;
@@ -311,6 +313,42 @@ public class BTree implements BTreeInterface {
             }
         }
     }
+
+    /**
+     * Reads in the data from disk with the given binary format
+     * @throws IOException
+     */
+    public void diskRead() throws IOException {
+        if (fileName == null) {
+            return;
+        }
+
+        try (DataInputStream in = new DataInputStream(new FileInputStream(fileName))) {
+            int loadedDegree = in.readInt();
+            long storedSize = in.readLong();
+            long storedNodeCount = in.readLong();
+            int storedHeight = in.readInt();
+
+            int count = in.readInt();
+
+            this.degree = loadedDegree;
+            this.root = new BTreeNode(true);
+            this.size = 0;
+            this.numberOfNodes = 1;
+            this.height = 0;
+
+            for (int i = 0; i < count; i++) {
+                String key = in.readUTF();
+                long keyCount = in.readLong();
+                insertLoaded(new TreeObject(key, keyCount));
+            }
+
+            // restore metadata to match saved values if desired
+            this.size = storedSize;
+            this.numberOfNodes = storedNodeCount;
+            this.height = storedHeight;
+        }
+    } 
 
 
     /**
