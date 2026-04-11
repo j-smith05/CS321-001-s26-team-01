@@ -1,5 +1,7 @@
 package cs321.btree;
 
+import java.io.DataOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -282,9 +284,33 @@ public class BTree implements BTreeInterface {
         }
     }
 
-    // ------------------------
-    // Disk Write / Read
-    // ------------------------
+    /**
+     * Writes the B-Tree to disk in a binary format. 
+     * The format includes the degree, size, number 
+     * of nodes, height, and all TreeObjects in sorted order.
+     * @throws IOException if an I/O error occurs while writing to the file
+     */
+    public void diskWrite() throws IOException {
+        if (fileName == null) {
+            return;
+        }
+
+        List<TreeObject> objects = new ArrayList<>();
+        collectObjectsInOrder(root, objects);
+
+        try (DataOutputStream out = new DataOutputStream(new FileOutputStream(fileName))) {
+            out.writeInt(degree);
+            out.writeLong(size);
+            out.writeLong(numberOfNodes);
+            out.writeInt(height);
+
+            out.writeInt(objects.size());
+            for (TreeObject obj : objects) {
+                out.writeUTF(obj.getKey());
+                out.writeLong(obj.getCount());
+            }
+        }
+    }
 
 
     /**
